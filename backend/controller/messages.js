@@ -1,30 +1,27 @@
-const Messages = require('../model/messages');
-const ErrorHandler = require('../ultis/ErrorHandler');
-const catchAsyncErrors = require('../middleware/catchAsyncErrors');
-const express = require('express');
-const cloudinary = require('cloudinary');
+const { upload } = require("../multer");
+const Messages = require("../model/messages");
+const express = require("express");
 const router = express.Router();
+const catchAsyncErrors = require("../middleware/catchAsyncErrors");
+const ErrorHandler = require("../ultis/ErrorHandler");
 
 // create new message
 router.post(
-  '/create-new-message',
+  "/create-new-message",
+  upload.array("images"),
   catchAsyncErrors(async (req, res, next) => {
     try {
       const messageData = req.body;
-
-      if (req.body.images) {
-        const myCloud = await cloudinary.v2.uploader.upload(req.body.images, {
-          folder: 'messages',
-        });
-        messageData.images = {
-          public_id: myCloud.public_id,
-          url: myCloud.url,
-        };
+      if (req.files && req.files.length > 0) {
+        const files = req.files;
+        const imageUrls = files.map((file) => `${file.filename}`);
+        messageData.images = imageUrls;
       }
 
       messageData.conversationId = req.body.conversationId;
       messageData.sender = req.body.sender;
       messageData.text = req.body.text;
+
 
       const message = new Messages({
         conversationId: messageData.conversationId,
@@ -34,20 +31,20 @@ router.post(
       });
 
       await message.save();
-
       res.status(201).json({
         success: true,
         message,
       });
     } catch (error) {
-      return next(new ErrorHandler(error.message), 500);
+      console.error("Error creating message:", error);
+      return next(new ErrorHandler(error.message, 500));
     }
   })
 );
 
 // get all messages with conversation id
 router.get(
-  '/get-all-messages/:id',
+  "/get-all-messages/:id",
   catchAsyncErrors(async (req, res, next) => {
     try {
       const messages = await Messages.find({
@@ -63,5 +60,6 @@ router.get(
     }
   })
 );
+
 
 module.exports = router;

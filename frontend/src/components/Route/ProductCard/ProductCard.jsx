@@ -18,7 +18,7 @@ import {
 import { useEffect } from "react";
 import { addTocart } from "../../../redux/action/cart";
 import { toast } from "react-toastify";
-import Ratings from "../../Route/Products/Ratings";
+import Ratings from "../../Products/Ratings";
 import { backend_url } from "../../../server";
 
 const ProductCard = ({ data, isEvent }) => {

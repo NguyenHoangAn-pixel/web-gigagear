@@ -1,15 +1,16 @@
 const express = require('express');
+const router = express.Router();
+const Event = require('../model/event');
+const { upload } = require('../multer');
 const catchAsyncErrors = require('../middleware/catchAsyncErrors');
 const Shop = require('../model/shop');
-const Event = require('../model/event');
 const ErrorHandler = require('../ultis/ErrorHandler');
 const { isSeller, isAdmin, isAuthenticated } = require('../middleware/auth');
-const router = express.Router();
-const cloudinary = require('cloudinary');
+const fs = require('fs');
 
-// create event
 router.post(
   '/create-event',
+  upload.array('images'),
   catchAsyncErrors(async (req, res, next) => {
     try {
       const shopId = req.body.shopId;
@@ -17,36 +18,15 @@ router.post(
       if (!shop) {
         return next(new ErrorHandler('Shop Id is invalid!', 400));
       } else {
-        let images = [];
-
-        if (typeof req.body.images === 'string') {
-          images.push(req.body.images);
-        } else {
-          images = req.body.images;
-        }
-
-        const imagesLinks = [];
-
-        for (let i = 0; i < images.length; i++) {
-          const result = await cloudinary.v2.uploader.upload(images[i], {
-            folder: 'products',
-          });
-
-          imagesLinks.push({
-            public_id: result.public_id,
-            url: result.secure_url,
-          });
-        }
-
-        const productData = req.body;
-        productData.images = imagesLinks;
-        productData.shop = shop;
-
-        const event = await Event.create(productData);
-
+        const files = req.files;
+        const imageUrls = files.map((file) => `${file.filename}`);
+        const eventData = req.body;
+        eventData.images = imageUrls;
+        eventData.shop = shop;
+        const product = await Event.create(eventData);
         res.status(201).json({
           success: true,
-          event,
+          product,
         });
       }
     } catch (error) {
@@ -54,7 +34,6 @@ router.post(
     }
   })
 );
-
 // get all events
 router.get('/get-all-events', async (req, res, next) => {
   try {
@@ -67,14 +46,12 @@ router.get('/get-all-events', async (req, res, next) => {
     return next(new ErrorHandler(error, 400));
   }
 });
-
 // get all events of a shop
 router.get(
   '/get-all-events/:id',
   catchAsyncErrors(async (req, res, next) => {
     try {
       const events = await Event.find({ shopId: req.params.id });
-
       res.status(201).json({
         success: true,
         events,
@@ -84,39 +61,55 @@ router.get(
     }
   })
 );
-
 // delete event of a shop
 router.delete(
   '/delete-shop-event/:id',
+
   catchAsyncErrors(async (req, res, next) => {
     try {
-      const event = await Event.findById(req.params.id);
+      const productId = req.params.id;
 
-      if (!event) {
-        return next(new ErrorHandler('Event is not found with this id', 404));
+      // Tìm sự kiện cần xóa
+      const eventData = await Event.findById(productId);
+
+      // Kiểm tra nếu không tìm thấy sự kiện
+      if (!eventData) {
+        return res.status(404).json({
+          success: false,
+          message: 'Event not found with this id!',
+        });
       }
 
-      // Xóa hình ảnh của sự kiện trên Cloudinary nếu có
-      for (let i = 0; i < event.images.length; i++) {
-        const result = await cloudinary.v2.uploader.destroy(
-          event.images[i].public_id
-        );
-      }
+      // Xóa sự kiện trước để phản hồi ngay lập tức
+      await Event.findByIdAndDelete(productId);
 
-      // Thay thế .remove() bằng .deleteOne()
-      await event.deleteOne();
-
-      res.status(201).json({
+      // Phản hồi thành công ngay sau khi xóa sự kiện
+      res.status(200).json({
         success: true,
         message: 'Event Deleted successfully!',
       });
+
+      // Xóa hình ảnh sau khi đã phản hồi thành công
+      const deleteFiles = eventData.images.map(async (imageUrl) => {
+        const filePath = `uploads/${imageUrl}`;
+        try {
+          await fs.promises.unlink(filePath);
+        } catch (err) {
+          console.error(`Failed to delete file ${filePath}:`, err);
+        }
+      });
+
+      // Dùng Promise.all để đảm bảo xóa tất cả file cùng lúc
+      await Promise.all(deleteFiles);
     } catch (error) {
-      return next(new ErrorHandler(error.message, 400));
+      return next(
+        new ErrorHandler(error.message || 'Something went wrong', 400)
+      );
     }
   })
 );
 
-// all events --- for admin
+// all event --- for admin
 router.get(
   '/admin-all-events',
   isAuthenticated,
@@ -132,63 +125,6 @@ router.get(
       });
     } catch (error) {
       return next(new ErrorHandler(error.message, 500));
-    }
-  })
-);
-
-// review for a product
-router.put(
-  '/create-new-review',
-  isAuthenticated,
-  catchAsyncErrors(async (req, res, next) => {
-    try {
-      const { user, rating, comment, productId, orderId } = req.body;
-
-      const product = await Product.findById(productId);
-
-      const review = {
-        user,
-        rating,
-        comment,
-        eventId,
-      };
-
-      const isReviewed = product.reviews.find(
-        (rev) => rev.user._id === req.user._id
-      );
-
-      if (isReviewed) {
-        product.reviews.forEach((rev) => {
-          if (rev.user._id === req.user._id) {
-            (rev.rating = rating), (rev.comment = comment), (rev.user = user);
-          }
-        });
-      } else {
-        product.reviews.push(review);
-      }
-
-      let avg = 0;
-
-      product.reviews.forEach((rev) => {
-        avg += rev.rating;
-      });
-
-      product.ratings = avg / product.reviews.length;
-
-      await product.save({ validateBeforeSave: false });
-
-      await Order.findByIdAndUpdate(
-        orderId,
-        { $set: { 'cart.$[elem].isReviewed': true } },
-        { arrayFilters: [{ 'elem._id': productId }], new: true }
-      );
-
-      res.status(200).json({
-        success: true,
-        message: 'Reviwed succesfully!',
-      });
-    } catch (error) {
-      return next(new ErrorHandler(error, 400));
     }
   })
 );
