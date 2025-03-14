@@ -4,7 +4,7 @@ const Event = require('../model/event');
 const { upload } = require('../multer');
 const catchAsyncErrors = require('../middleware/catchAsyncErrors');
 const Shop = require('../model/shop');
-const ErrorHandler = require('../ultis/ErrorHandler');
+const ErrorHandler = require('../utils/ErrorHandler');
 const { isSeller, isAdmin, isAuthenticated } = require('../middleware/auth');
 const fs = require('fs');
 

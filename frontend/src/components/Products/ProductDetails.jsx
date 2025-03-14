@@ -8,14 +8,14 @@ import {
   AiOutlineShoppingCart,
 } from "react-icons/ai";
 import { useDispatch, useSelector } from "react-redux";
-import { getAllProductsShop } from "../../redux/actions/product";
+import { getAllProductsShop } from "../../redux/action/product";
 import { backend_url, server } from "../../server";
 import { toast } from "react-toastify";
 import {
   addToWishlist,
   removeFromWishlist,
-} from "../../redux/actions/wishlist";
-import { addTocart } from "../../redux/actions/cart";
+} from "../../redux/action/wishlist";
+import { addTocart } from "../../redux/action/cart";
 import Ratings from "./Ratings";
 import axios from "axios";
 

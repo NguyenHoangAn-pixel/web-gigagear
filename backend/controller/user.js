@@ -6,8 +6,8 @@ const { upload } = require("../multer");
 const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
-const sendMail = require("../ultis/sendMail");
-const sendToken = require("../ultis/jwtToken");
+const sendMail = require("../utils/sendMail");
+const sendToken = require("../utils/jwtToken");
 const { isAuthenticated, isAdmin } = require("../middleware/auth");
 
 router.post("/create-user", upload.single("file"), async (req, res, next) => {

@@ -1,10 +1,10 @@
 const Shop = require('../model/shop');
-const ErrorHandler = require('../ultis/ErrorHandler');
+const ErrorHandler = require('../utils/ErrorHandler');
 const catchAsyncErrors = require('../middleware/catchAsyncErrors');
 const express = require('express');
 const { isSeller, isAuthenticated, isAdmin } = require('../middleware/auth');
 const Withdraw = require('../model/withdraw');
-const sendMail = require('../ultis/sendMail');
+const sendMail = require('../utils/sendMail');
 //const sendMail = require("../utils/sendMail");
 const router = express.Router();
 

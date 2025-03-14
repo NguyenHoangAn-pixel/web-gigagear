@@ -3,7 +3,7 @@ const Messages = require("../model/messages");
 const express = require("express");
 const router = express.Router();
 const catchAsyncErrors = require("../middleware/catchAsyncErrors");
-const ErrorHandler = require("../ultis/ErrorHandler");
+const ErrorHandler = require("../utils/ErrorHandler");
 
 // create new message
 router.post(
