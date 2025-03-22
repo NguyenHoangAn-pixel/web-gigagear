@@ -22,8 +22,8 @@ import {
   ShopAllRefunds,
   UserInbox,
 } from './routes/Routes';
-import { ToastContainer } from 'react-toast.cify';
-import 'react-toastify/dist/ReactToastifyss';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import './App.css';
 import Store from './redux/store.js';
 import { loadSeller, loadUser } from './redux/action/user.js';
